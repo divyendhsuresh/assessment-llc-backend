@@ -1,12 +1,11 @@
 // require('reflect-metadata'); // Required by TypeORM
 const express = require('express');
 const app = express();
+const cors = require('cors');
 const PORT = process.env.PORT || 3000;
 app.use(express.json()); // Middleware to parse JSON
 const userRoutes = require('./routs/index.js');
-// const homeRouts = require('./routs/homeRouts.js');
-
-
+app.use(cors());
 app.use('/user', userRoutes);
 // app.use('/home', homeRouts);
 

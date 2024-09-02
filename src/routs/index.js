@@ -82,26 +82,13 @@ router.post('/home/edituser', async (req, res) => {
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
-        // console.log("test - 1 ");
+
         // Check if the user already exists
         let user = await queryRunner.manager.findOne(User, { where: { username } });
 
-        // console.log(user);
-        // console.log("test - 2");
 
-        // if (user) {
-        //     // If the user exists, check if the email needs to be updated
-        //     if (user.email !== email) {
-        //         user.email = email;
-        //         await queryRunner.manager.save(user);
-        //     } 
-        // }
         if (!user) {
-            // If the user does not exist, create a new user
-            // user = new User();
-            // user.username = username;
-            // user.email = email;
-            // await queryRunner.manager.save(user);
+
             await queryRunner.manager.insert(User, { username, email });
             user = await queryRunner.manager.findOne(User, { where: { username } });
             console.log(user);
@@ -109,7 +96,6 @@ router.post('/home/edituser', async (req, res) => {
 
         // Check if the home exists in the home table
         const home = await queryRunner.manager.findOne(Home, { where: { street_address } });
-        // console.log(home);
         if (!home) {
             throw new Error("Home not found");
         }
@@ -134,11 +120,8 @@ router.post('/home/edituser', async (req, res) => {
             return res.status(400).json({ error: "User is already associated with this home" });
         }
 
-        // console.log("test - 5");
 
-        // Commit the transaction
         await queryRunner.commitTransaction();
-        // console.log("test = 6");
         res.status(200).json({ message: "User added to home successfully" });
 
     } catch (error) {
@@ -152,6 +135,69 @@ router.post('/home/edituser', async (req, res) => {
         await queryRunner.release();
     }
 });
+
+router.post('/home/assign-users-to-home', async (req, res) => {
+    const { street_address, userIds } = req.body;
+
+    if (!street_address || !userIds || !Array.isArray(userIds)) {
+        return res.status(400).json({ error: "Street address and an array of userIds are required" });
+    }
+
+    const queryRunner = AppDataSource.createQueryRunner();
+
+    try {
+        // Start a transaction
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        // Check if the home exists in the home table
+        const home = await queryRunner.manager.findOne(Home, { where: { street_address } });
+        if (!home) {
+            throw new Error(`Home not found for street address: ${street_address}`);
+        }
+
+        for (const userId of userIds) {
+            // Check if the user exists
+            const user = await queryRunner.manager.findOne(User, { where: { username: userId } });
+            if (!user) {
+                throw new Error(`User not found for userId: ${userId}`);
+            }
+
+            // Check if the user is already associated with the home in user_home_relation
+            const existingRelation = await queryRunner.manager.findOne(UserHomeRelation, {
+                where: { user: user, home: home }
+            });
+
+            if (!existingRelation) {
+                await queryRunner.manager
+                    .createQueryBuilder()
+                    .insert()
+                    .into(UserHomeRelation)
+                    .values({
+                        user: user,
+                        home: home
+                    })
+                    .execute();
+            } else {
+                throw new Error(`User with userId ${userId} is already associated with home at ${street_address}`);
+            }
+        }
+
+        await queryRunner.commitTransaction();
+        res.status(200).json({ message: "Users assigned to home successfully" });
+
+    } catch (error) {
+        console.error("Error assigning users to home:", error);
+        // Rollback the transaction if any error occurs
+        await queryRunner.rollbackTransaction();
+
+        res.status(500).json({ error: `Failed to assign users to home: ${error.message}` });
+    } finally {
+        // Release the query runner
+        await queryRunner.release();
+    }
+});
+
 
 
 
