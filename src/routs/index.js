@@ -145,12 +145,14 @@ router.post('/home/assign-users-to-home', async (req, res) => {
             throw new Error(`Home not found for street address: ${street_address}`);
         }
 
+        // console.log({ "test home": home });
         for (const userId of userIds) {
             // Check if the user exists
             const user = await queryRunner.manager.findOne(User, { where: { username: userId } });
             if (!user) {
                 throw new Error(`User not found for userId: ${userId}`);
             }
+            // console.log({ "test user log": user });
 
             // Check if the user is already associated with the home in user_home_relation
             const existingRelation = await queryRunner.manager.findOne(UserHomeRelation, {
@@ -158,17 +160,27 @@ router.post('/home/assign-users-to-home', async (req, res) => {
             });
 
             if (!existingRelation) {
-                await queryRunner.manager
-                    .createQueryBuilder()
-                    .insert()
-                    .into(UserHomeRelation)
-                    .values({
-                        user: user,
-                        home: home
-                    })
-                    .execute();
-            } else {
-                throw new Error(`User with userId ${userId} is already associated with home at ${street_address}`);
+
+                if (existingRelation) {
+                    // Update the existing relation if found
+                    await queryRunner.manager
+                        .createQueryBuilder()
+                        .update(UserHomeRelation)
+                        .set({ home: home }) // Or any other fields that need updating
+                        .where("userId = :userId AND homeId = :homeId", { userId: user.id, homeId: home.id })
+                        .execute();
+                } else {
+                    // Insert a new relation if not found
+                    await queryRunner.manager
+                        .createQueryBuilder()
+                        .insert()
+                        .into(UserHomeRelation)
+                        .values({
+                            user: user,
+                            home: home
+                        })
+                        .execute();
+                }
             }
         }
 
@@ -176,6 +188,7 @@ router.post('/home/assign-users-to-home', async (req, res) => {
         res.status(200).json({ message: "Users assigned to home successfully" });
 
     } catch (error) {
+        console.log(error);
         console.error("Error assigning users to home:", error);
         // Rollback the transaction if any error occurs
         await queryRunner.rollbackTransaction();
