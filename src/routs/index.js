@@ -46,7 +46,7 @@ router.get("/home/find-by-user", async (req, res) => {
 router.get('/home/:street_address', async (req, res) => {
     try {
         const { street_address } = req.params;
-        console.log(street_address);
+        // console.log(street_address);
 
         const userHomeRelationRepository = AppDataSource.getRepository(UserHomeRelation);
 
@@ -152,16 +152,16 @@ router.post('/home/assign-users-to-home', async (req, res) => {
             if (!user) {
                 throw new Error(`User not found for userId: ${userId}`);
             }
-            console.log({ "test user log": user });
+            // console.log({ "test user log": user });
 
             // Check if the user is already associated with the home in user_home_relation
             const existingRelation = await queryRunner.manager.findOne(UserHomeRelation, {
                 where: { user: user, home: home }
             });
 
-            console.log({ "relation" : existingRelation });
+            // console.log({ "relation" : existingRelation });
 
-            if (!existingRelation) {
+            // if (!existingRelation) {
 
                 if (existingRelation) {
                     // Update the existing relation if found
@@ -169,7 +169,7 @@ router.post('/home/assign-users-to-home', async (req, res) => {
                         .createQueryBuilder()
                         .update(UserHomeRelation)
                         .set({ home: home }) // Or any other fields that need updating
-                        .where("userId = :userId AND homeId = :homeId", { userId: user.username, homeId: home.street_address })
+                        .where("username = :userId AND street_address = :homeId", { userId: user.username, homeId: home.street_address })
                         .execute();
                 } else {
                     // Insert a new relation if not found
@@ -183,7 +183,7 @@ router.post('/home/assign-users-to-home', async (req, res) => {
                         })
                         .execute();
                 }
-            }
+            // }
         }
 
         await queryRunner.commitTransaction();
