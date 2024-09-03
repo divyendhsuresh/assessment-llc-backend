@@ -1,5 +1,4 @@
 const { EntitySchema } = require("typeorm");
-const UserHomeRelation = require("./UserHomeRelation");
 
 const User = new EntitySchema({
     name: "User",

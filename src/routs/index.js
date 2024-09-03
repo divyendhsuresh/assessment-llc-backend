@@ -78,28 +78,21 @@ router.post('/home/edituser', async (req, res) => {
     const queryRunner = AppDataSource.createQueryRunner();
 
     try {
-        // Start a transaction
         await queryRunner.connect();
         await queryRunner.startTransaction();
-
-
         // Check if the user already exists
         let user = await queryRunner.manager.findOne(User, { where: { username } });
 
-
         if (!user) {
-
             await queryRunner.manager.insert(User, { username, email });
             user = await queryRunner.manager.findOne(User, { where: { username } });
             console.log(user);
         }
-
         // Check if the home exists in the home table
         const home = await queryRunner.manager.findOne(Home, { where: { street_address } });
         if (!home) {
             throw new Error("Home not found");
         }
-
         // Check if the user is already associated with the home in user_home_relation
         const existingRelation = await queryRunner.manager.findOne(UserHomeRelation, {
             where: { user: user, home: home }
@@ -120,15 +113,12 @@ router.post('/home/edituser', async (req, res) => {
             return res.status(400).json({ error: "User is already associated with this home" });
         }
 
-
         await queryRunner.commitTransaction();
         res.status(200).json({ message: "User added to home successfully" });
-
     } catch (error) {
         console.error("Error adding user to home:", error);
         // Rollback the transaction if any error occurs
         await queryRunner.rollbackTransaction();
-
         res.status(500).json({ error: "Failed to add user to home" });
     } finally {
         // Release the query runner
@@ -142,7 +132,6 @@ router.post('/home/assign-users-to-home', async (req, res) => {
     if (!street_address || !userIds || !Array.isArray(userIds)) {
         return res.status(400).json({ error: "Street address and an array of userIds are required" });
     }
-
     const queryRunner = AppDataSource.createQueryRunner();
 
     try {
@@ -190,7 +179,6 @@ router.post('/home/assign-users-to-home', async (req, res) => {
         console.error("Error assigning users to home:", error);
         // Rollback the transaction if any error occurs
         await queryRunner.rollbackTransaction();
-
         res.status(500).json({ error: `Failed to assign users to home: ${error.message}` });
     } finally {
         // Release the query runner
